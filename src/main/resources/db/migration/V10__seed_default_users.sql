@@ -4,7 +4,7 @@ VALUES
         uuid_generate_v4(),
         'Administrador Padrão',
         'admin@mechanicalhub.com',
-        '$2a$10$wRWktYa3plYYEYcbQr8leOBrNmloJE0s1awb7yuHedmjiUjbAvIH6',
+        '$2a$10$uI41K5GSvQqabJUAGtISBeLJdVqEUY254SyF6Dj0gGA2QanERbMeK',
         (SELECT id FROM profiles WHERE name = 'ADMINISTRATOR'),
         CURRENT_TIMESTAMP,
         CURRENT_TIMESTAMP
