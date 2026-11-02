@@ -77,7 +77,8 @@ jobs:
           mvn test sonar:sonar --no-transfer-progress \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.wait=true \
+            -Dsonar.scanner.skipJreProvisioning=true
 
   create-pr:
     name: Criar PR para Main
