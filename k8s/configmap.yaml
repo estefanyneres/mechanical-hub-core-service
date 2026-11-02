@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-service-config
+  namespace: core-service
+data:
+  DB_HOST: "${DB_HOST}"
+  DB_PORT: "5432"
+  DB_NAME: "core_service_db"
+  DB_USER: "dbadmin"
+  RABBITMQ_HOST: "rabbitmq.rabbitmq.svc.cluster.local"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USERNAME: "mechanical-hub"
+  TZ: "America/Sao_Paulo"
+  SPRING_PROFILES_ACTIVE: "prod"

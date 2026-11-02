@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-service
+  namespace: core-service
+  labels:
+    app: core-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core-service
+  template:
+    metadata:
+      labels:
+        app: core-service
+    spec:
+      containers:
+        - name: core-service
+          image: "${ECR_REPOSITORY_URL}:${IMAGE_TAG}"
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: core-service-config
+            - secretRef:
+                name: core-service-secrets
+          env:
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DD_SERVICE
+              value: "core-service"
+            - name: DD_ENV
+              value: "prod"
+            - name: DD_VERSION
+              value: "${IMAGE_TAG}"
+            - name: DD_LOGS_INJECTION
+              value: "true"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "1200Mi"
+            limits:
+              cpu: "500m"
+              memory: "1536Mi"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 5

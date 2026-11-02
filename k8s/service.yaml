@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-service
+  namespace: core-service
+spec:
+  selector:
+    app: core-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      # nodePort fixo (convencao: 30080 monolito, 30081 core-service, 30082
+      # repair-service, 30083 stock-service, 30084 billing-service, 30900
+      # sonarqube) -- a target group do api-gateway sera criada na TASK-017
+      # apontando pra esta porta.
+      nodePort: 30081
+  type: NodePort
