@@ -107,8 +107,11 @@ public class ServiceOrderUseCase {
         // orcamento, porque so agora o mecanico decidiu que o diagnostico
         // acabou. Garante que a OS ja esta em AGUARDANDO_APROVACAO antes de
         // qualquer reply do billing-service poder chegar.
+        log.warn("[DEBUG-SAGA] targetStatus={} match={}", targetStatus, targetStatus == OrderStatusEnum.AGUARDANDO_APROVACAO);
         if (targetStatus == OrderStatusEnum.AGUARDANDO_APROVACAO) {
+            log.warn("[DEBUG-SAGA] chamando requestBudget para OS {}", saved.getId());
             sagaOrchestratorUseCase.requestBudget(saved);
+            log.warn("[DEBUG-SAGA] requestBudget retornou sem exception");
         }
 
         return saved;
