@@ -9,18 +9,24 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Le os dois tipos de JWT que chegam neste servico: o de funcionario
- * (emitido pelo /auth/login daqui mesmo) e o de cliente (emitido pelo
- * auth-lambda via CPF, Fase 3) -- os dois usam o mesmo JWT_SECRET.
+ * Le os tres tipos de JWT que chegam neste servico: o de funcionario
+ * (emitido pelo /auth/login daqui mesmo), o de cliente (emitido pelo
+ * auth-lambda via CPF, Fase 3) e o de servico (ServiceTokenIssuer do
+ * billing-service, mesmo padrao ja usado entre repair-service/
+ * stock-service -- "sub" e o nome do servico, nao um e-mail, por isso o
+ * fallback quando nao acha usuario pelo e-mail). Todos usam o mesmo
+ * JWT_SECRET.
  */
 @Component
 @RequiredArgsConstructor
@@ -43,8 +49,8 @@ public class SecurityFilter extends OncePerRequestFilter {
             if (decoded != null) {
                 if (CUSTOMER_TOKEN_TYPE.equals(decoded.getClaim("type").asString())) {
                     authenticateCustomer(decoded.getSubject());
-                } else {
-                    authenticateUser(decoded.getSubject());
+                } else if (!authenticateUser(decoded.getSubject())) {
+                    authenticateServiceToken(decoded);
                 }
             }
         }
@@ -52,9 +58,24 @@ public class SecurityFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private void authenticateUser(String email) {
-        userGateway.findByEmail(email).ifPresent(user ->
-                setAuthentication(new UserSecurityAdapter(user)));
+    private boolean authenticateUser(String email) {
+        return userGateway.findByEmail(email)
+                .map(user -> {
+                    setAuthentication(new UserSecurityAdapter(user));
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    private void authenticateServiceToken(DecodedJWT decoded) {
+        String profile = decoded.getClaim("profile").asString();
+        if (profile != null) {
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    decoded.getSubject(),
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + profile.toUpperCase())));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
     }
 
     private void authenticateCustomer(String subject) {
