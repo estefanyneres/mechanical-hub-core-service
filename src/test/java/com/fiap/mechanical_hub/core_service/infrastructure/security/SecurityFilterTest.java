@@ -101,6 +101,50 @@ class SecurityFilterTest {
     }
 
     @Test
+    void shouldAuthenticateServiceTokenWhenSubjectHasNoMatchingUser() throws Exception {
+        DecodedJWT decoded = mock(DecodedJWT.class);
+        Claim typeClaim = mock(Claim.class);
+        Claim profileClaim = mock(Claim.class);
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer serviceToken");
+        when(tokenService.decode("serviceToken")).thenReturn(decoded);
+        when(decoded.getClaim("type")).thenReturn(typeClaim);
+        when(typeClaim.asString()).thenReturn(null);
+        when(decoded.getSubject()).thenReturn("billing-service");
+        when(userGateway.findByEmail("billing-service")).thenReturn(Optional.empty());
+        when(decoded.getClaim("profile")).thenReturn(profileClaim);
+        when(profileClaim.asString()).thenReturn("ADMINISTRATOR");
+
+        securityFilter.doFilterInternal(request, response, filterChain);
+
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        assertNotNull(authentication);
+        assertEquals("billing-service", authentication.getPrincipal());
+        assertTrue(authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMINISTRATOR")));
+    }
+
+    @Test
+    void shouldNotAuthenticateWhenNoUserAndNoProfileClaim() throws Exception {
+        DecodedJWT decoded = mock(DecodedJWT.class);
+        Claim typeClaim = mock(Claim.class);
+        Claim profileClaim = mock(Claim.class);
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer unknownToken");
+        when(tokenService.decode("unknownToken")).thenReturn(decoded);
+        when(decoded.getClaim("type")).thenReturn(typeClaim);
+        when(typeClaim.asString()).thenReturn(null);
+        when(decoded.getSubject()).thenReturn("ghost@x.com");
+        when(userGateway.findByEmail("ghost@x.com")).thenReturn(Optional.empty());
+        when(decoded.getClaim("profile")).thenReturn(profileClaim);
+        when(profileClaim.asString()).thenReturn(null);
+
+        securityFilter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
     void shouldNotAuthenticateCustomerWhenSubjectIsNotValidUuid() throws Exception {
         DecodedJWT decoded = mock(DecodedJWT.class);
         Claim typeClaim = mock(Claim.class);
