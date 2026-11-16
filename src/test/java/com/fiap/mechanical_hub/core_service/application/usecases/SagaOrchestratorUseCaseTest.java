@@ -140,6 +140,17 @@ class SagaOrchestratorUseCaseTest {
     }
 
     @Test
+    void shouldStartExecutionOnExecucaoIniciada() {
+        when(factory.get(OrderStatusEnum.EM_EXECUCAO)).thenReturn(transition);
+
+        orchestrator.onExecucaoIniciada(orderId);
+
+        verify(transition).execute(order, null);
+        verify(serviceOrderGateway).save(order);
+        verifyNoInteractions(sagaStateGateway);
+    }
+
+    @Test
     void shouldFinishOrderOnExecucaoFinalizada() {
         when(factory.get(OrderStatusEnum.FINALIZADO)).thenReturn(transition);
         when(sagaStateGateway.findByServiceOrderId(orderId)).thenReturn(Optional.of(sagaState));

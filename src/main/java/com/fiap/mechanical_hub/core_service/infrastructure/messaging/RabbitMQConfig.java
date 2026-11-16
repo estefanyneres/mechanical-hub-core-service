@@ -64,6 +64,14 @@ import org.springframework.context.annotation.Configuration;
  *                                                                    confia numa reserva reconfirmada)
  *     - "material.indisponivel" {serviceOrderId, motivo}           (repair-service, TASK-022 - faltou peca
  *                                                                    na reserva sincrona com o Estoque Service)
+ *     - "execucao.iniciada"     {serviceOrderId}                   (repair-service, TASK-048 - mecanico
+ *                                                                    marcou a PRIMEIRA tarefa da OS como
+ *                                                                    INICIADO. Move a OS pra EM_EXECUCAO --
+ *                                                                    antes disso nao acontecia, e a OS ficava
+ *                                                                    presa em PRONTO_PARA_EXECUCAO enquanto
+ *                                                                    execucao.finalizada chegava depois e
+ *                                                                    caia num InvalidOrderTransitionException,
+ *                                                                    ver TASK-046)
  *     - "execucao.finalizada"   {serviceOrderId}                   (repair-service, TASK-024 - todas as
  *                                                                    tarefas concluidas)
  *     - "execucao.falhou"       {serviceOrderId, motivo}           (repair-service, TASK-024 - falha DURANTE
@@ -89,6 +97,7 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY_PAGAMENTO_FALHOU = "pagamento.falhou";
     public static final String ROUTING_KEY_MATERIAL_RESERVADO = "material.reservado";
     public static final String ROUTING_KEY_MATERIAL_INDISPONIVEL = "material.indisponivel";
+    public static final String ROUTING_KEY_EXECUCAO_INICIADA = "execucao.iniciada";
     public static final String ROUTING_KEY_EXECUCAO_FINALIZADA = "execucao.finalizada";
     public static final String ROUTING_KEY_EXECUCAO_FALHOU = "execucao.falhou";
 
@@ -135,6 +144,11 @@ public class RabbitMQConfig {
     @Bean
     public Binding materialIndisponivelBinding(Queue coreServiceQueue, TopicExchange sagaExchange) {
         return BindingBuilder.bind(coreServiceQueue).to(sagaExchange).with(ROUTING_KEY_MATERIAL_INDISPONIVEL);
+    }
+
+    @Bean
+    public Binding execucaoIniciadaBinding(Queue coreServiceQueue, TopicExchange sagaExchange) {
+        return BindingBuilder.bind(coreServiceQueue).to(sagaExchange).with(ROUTING_KEY_EXECUCAO_INICIADA);
     }
 
     @Bean

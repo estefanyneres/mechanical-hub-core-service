@@ -3,6 +3,8 @@ package com.fiap.mechanical_hub.core_service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiap.mechanical_hub.core_service.application.usecases.SagaOrchestratorUseCase;
+import com.fiap.mechanical_hub.core_service.domain.exceptions.InvalidOrderTransitionException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
@@ -19,6 +21,7 @@ import java.util.UUID;
  * header de tipo Java especifico do core-service. Eles so precisam
  * publicar JSON com os campos documentados em RabbitMQConfig.
  */
+@Slf4j
 @Component
 public class SagaEventListener {
 
@@ -36,6 +39,20 @@ public class SagaEventListener {
         JsonNode body = objectMapper.readTree(message.getBody());
         UUID serviceOrderId = UUID.fromString(body.get("serviceOrderId").asText());
 
+        try {
+            dispatch(routingKey, serviceOrderId, body);
+        } catch (InvalidOrderTransitionException e) {
+            // Erro PERMANENTE de estado (nao vai ter sucesso em nenhuma
+            // tentativa futura, ao contrario de uma falha transitoria tipo
+            // banco fora do ar) -- descarta a mensagem so logando, em vez
+            // de deixar o Spring AMQP reentregar ela pra sempre (TASK-046,
+            // ja visto reentregando a ~500 msgs/s e consumindo CPU a toa).
+            log.error("Transição de status inválida pra OS {} (routing key {}) - mensagem descartada: {}",
+                    serviceOrderId, routingKey, e.getMessage());
+        }
+    }
+
+    private void dispatch(String routingKey, UUID serviceOrderId, JsonNode body) {
         switch (routingKey) {
             case RabbitMQConfig.ROUTING_KEY_ORCAMENTO_GERADO -> {
                 BigDecimal valor = new BigDecimal(body.get("valor").asText());
@@ -53,6 +70,8 @@ public class SagaEventListener {
                     orchestrator.onMaterialReservado(serviceOrderId);
             case RabbitMQConfig.ROUTING_KEY_MATERIAL_INDISPONIVEL ->
                     orchestrator.onMaterialIndisponivel(serviceOrderId, textOrNull(body, "motivo"));
+            case RabbitMQConfig.ROUTING_KEY_EXECUCAO_INICIADA ->
+                    orchestrator.onExecucaoIniciada(serviceOrderId);
             case RabbitMQConfig.ROUTING_KEY_EXECUCAO_FINALIZADA ->
                     orchestrator.onExecucaoFinalizada(serviceOrderId);
             case RabbitMQConfig.ROUTING_KEY_EXECUCAO_FALHOU ->

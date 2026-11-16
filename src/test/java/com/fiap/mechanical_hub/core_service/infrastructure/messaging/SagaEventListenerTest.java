@@ -2,6 +2,7 @@ package com.fiap.mechanical_hub.core_service.infrastructure.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fiap.mechanical_hub.core_service.application.usecases.SagaOrchestratorUseCase;
+import com.fiap.mechanical_hub.core_service.domain.exceptions.InvalidOrderTransitionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -98,6 +100,27 @@ class SagaEventListenerTest {
                 "{\"serviceOrderId\":\"" + orderId + "\",\"motivo\":\"sem peça\"}"));
 
         verify(orchestrator).onMaterialIndisponivel(orderId, "sem peça");
+    }
+
+    @Test
+    void shouldDispatchExecucaoIniciada() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        listener.onMessage(message(RabbitMQConfig.ROUTING_KEY_EXECUCAO_INICIADA,
+                "{\"serviceOrderId\":\"" + orderId + "\"}"));
+
+        verify(orchestrator).onExecucaoIniciada(orderId);
+    }
+
+    @Test
+    void shouldDiscardMessageInsteadOfRequeuing_WhenTransitionIsInvalid() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        doThrow(new InvalidOrderTransitionException("transição inválida"))
+                .when(orchestrator).onExecucaoFinalizada(orderId);
+
+        listener.onMessage(message(RabbitMQConfig.ROUTING_KEY_EXECUCAO_FINALIZADA,
+                "{\"serviceOrderId\":\"" + orderId + "\"}"));
+
+        verify(orchestrator).onExecucaoFinalizada(orderId);
     }
 
     @Test

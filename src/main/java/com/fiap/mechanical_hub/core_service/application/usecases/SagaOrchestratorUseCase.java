@@ -122,6 +122,19 @@ public class SagaOrchestratorUseCase {
         log.warn("Material indisponível pra OS {}: {}", serviceOrderId, motivo);
     }
 
+    // Publicado pelo repair-service na PRIMEIRA tarefa da OS que vira
+    // INICIADO (TASK-048). Antes disso nao existia nenhum evento nesse
+    // momento, e a OS ficava presa em PRONTO_PARA_EXECUCAO ate alguem
+    // finalizar uma tarefa -- quando o execucao.finalizada chegava, a
+    // transicao pra FINALIZADO exigia EM_EXECUCAO como origem e falhava
+    // com InvalidOrderTransitionException (TASK-046).
+    public void onExecucaoIniciada(UUID serviceOrderId) {
+        ServiceOrder order = findOrder(serviceOrderId);
+        factory.get(OrderStatusEnum.EM_EXECUCAO).execute(order, null);
+        serviceOrderGateway.save(order);
+        log.info("OS {} em execução - primeira tarefa iniciada pelo mecânico", order.getOrderNumber());
+    }
+
     public void onExecucaoFinalizada(UUID serviceOrderId) {
         ServiceOrder order = findOrder(serviceOrderId);
         factory.get(OrderStatusEnum.FINALIZADO).execute(order, null);
