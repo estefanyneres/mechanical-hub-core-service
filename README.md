@@ -4,6 +4,10 @@ Microsserviço central do **Mechanical Hub** (Fase 4 — Tech Challenge): dono d
 
 Nasceu da quebra do monolito `mechanical-hub` (Fases 1–3) em microsserviços, seguindo a decomposição por domínio de dados documentada em [`docs/adrs.md`](docs/adrs.md) (ADR-001).
 
+## Diagrama de infraestrutura
+
+![Infraestrutura AWS - Fase 4](docs/desenhos/mechanical-hub-infraestrutura-fase-04.jpg)
+
 ## Arquitetura
 
 Clean Architecture (`domain` / `application` / `infrastructure`), mesmo padrão das fases anteriores:
