@@ -40,86 +40,15 @@ O Saga **não começa na criação da OS** — só quando o mecânico move a OS 
 
 Mensagens que caem numa transição de status inválida (`InvalidOrderTransitionException`) são descartadas com log, não reentregues indefinidamente — ver ADR/incidente documentado no histórico do projeto (loop de reentrega real, corrigido).
 
-**Diagrama do fluxo** (quem dispara, pra qual fila cai, REST síncrono vs evento assíncrono):
+**Diagrama do fluxo** (quem fala com quem — a lista de eventos já está nas tabelas acima):
 
 ```mermaid
-flowchart TD
-    subgraph Gatilhos["Gatilhos manuais / externos"]
-        M1["Mecânico: PATCH /service-orders/{id}/status → Aguardando aprovação"]
-        C1["Cliente: POST /budgets/{id}/approve ou /reject"]
-        MP["Mercado Pago: POST /webhooks/mercadopago"]
-        M2i["Mecânico: PATCH tarefa → INICIADO (1ª da OS)"]
-        M2f["Mecânico: PATCH tarefa → FINALIZADO (última pendente)"]
-        M3["Mecânico: POST .../execution-failure"]
-        A1["Admin: POST /stock/entry"]
-    end
-
-    subgraph Exchange["RabbitMQ — saga.exchange (topic)"]
-        EX((saga.exchange))
-    end
-
-    subgraph CoreSvc["core-service — Orquestrador do Saga"]
-        CQ[["core-service.eventos.queue"]]
-        SAGA["SagaOrchestratorUseCase"]
-        CQ --> SAGA
-    end
-
-    subgraph BillingSvc["billing-service"]
-        BQ[["billing-service.eventos.queue"]]
-        BL["Orçamento + Mercado Pago"]
-        BQ --> BL
-    end
-
-    subgraph RepairSvc["repair-service"]
-        RQ[["repair-service.eventos.queue"]]
-        RL["Reserva de material + tarefas"]
-        RQ --> RL
-    end
-
-    subgraph StockSvc["stock-service"]
-        ST["Reserva / baixa / entrada"]
-    end
-
-    M1 --> SAGA
-    SAGA -- "publica: orcamento.solicitado" --> EX
-    EX -- "orcamento.solicitado" --> BQ
-
-    BL -- "publica: orcamento.gerado" --> EX
-    EX -- "orcamento.gerado" --> CQ
-
-    C1 --> BL
-    BL -- "publica: orcamento.aprovado / orcamento.recusado" --> EX
-    EX -- "orcamento.aprovado / orcamento.recusado" --> CQ
-
-    MP --> BL
-    BL -- "publica: pagamento.confirmado / pagamento.falhou" --> EX
-    EX -- "pagamento.confirmado / pagamento.falhou" --> CQ
-    EX -- "pagamento.confirmado" --> RQ
-
-    RL -- "REST síncrono: POST /stock/reservations" --> ST
-    ST -. "resposta síncrona" .-> RL
-    RL -- "publica: material.reservado / material.indisponivel" --> EX
-    EX -- "material.reservado / material.indisponivel" --> CQ
-
-    A1 --> ST
-    ST -- "publica: estoque.reabastecido" --> EX
-    EX -- "estoque.reabastecido" --> RQ
-
-    M2i --> RL
-    RL -. "REST síncrono: GET /service-orders/{id}/status" .-> SAGA
-    RL -- "publica: execucao.iniciada (só a 1ª tarefa)" --> EX
-    EX -- "execucao.iniciada" --> CQ
-
-    M2f --> RL
-    RL -- "publica: execucao.finalizada" --> EX
-    EX -- "execucao.finalizada" --> CQ
-
-    M3 --> RL
-    RL -- "publica: execucao.falhou" --> EX
-    EX -- "execucao.falhou" --> CQ
-
-    SAGA -- "publica: execucao.revertida" --> EX
-    EX -- "execucao.revertida" --> ST
+flowchart LR
+    O["core-service<br/>(orquestrador)"] <-->|eventos do Saga| MQ(("RabbitMQ<br/>saga.exchange"))
+    MQ <--> B["billing-service<br/>orçamento + pagamento"]
+    MQ <--> R["repair-service<br/>material + tarefas"]
+    MQ <--> S["stock-service<br/>estoque"]
+    R <-.REST síncrono.-> S
 ```
 
 ### Máquina de estados da OS
