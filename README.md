@@ -75,7 +75,9 @@ flowchart LR
 
 Requer as variáveis de ambiente de `k8s/configmap.yaml`/`k8s/secret.yaml` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `RABBITMQ_HOST`, `JWT_SECRET`, etc.).
 
-Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+Swagger UI local: `http://localhost:8080/swagger-ui/index.html`
+
+**Swagger UI público:** `<api_endpoint>/swagger-ui/index.html`, onde `<api_endpoint>` é o output `api_endpoint` da pipeline do [`api-gateway`](https://github.com/estefanyneres/mechanical-hub-api-gateway) (é o path padrão/não mapeado a nenhum outro serviço, então cai direto aqui). Muda a cada sessão nova do AWS Academy — a infraestrutura é destruída e recriada, então a URL de hoje não é fixa.
 
 ## Testes
 
