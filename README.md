@@ -83,7 +83,11 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 ./mvnw test
 ```
 
-**286 testes**, **87% de cobertura** (gate do SonarQube: 80% em código novo). Inclui um cenário BDD completo (`src/test/resources/features/saga-fluxo-completo.feature`) cobrindo o fluxo de ponta a ponta da OS através do Saga, com os use cases reais ligados a fakes em memória — só a entrega dos eventos externos é simulada, nunca a lógica de decisão.
+**286 testes**, **88,7% de cobertura** (gate do SonarQube: 80% em código novo). Inclui um cenário BDD completo (`src/test/resources/features/saga-fluxo-completo.feature`) cobrindo o fluxo de ponta a ponta da OS através do Saga, com os use cases reais ligados a fakes em memória — só a entrega dos eventos externos é simulada, nunca a lógica de decisão.
+
+**Evidência de cobertura (SonarQube):**
+
+![Cobertura de testes - SonarQube](docs/desenhos/cobertura-sonar-fase-04.png)
 
 ## Deploy
 
